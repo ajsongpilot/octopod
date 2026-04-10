@@ -63,19 +63,26 @@ pub struct AgentSessionInfo {
 }
 
 impl AgentSessionInfo {
-    fn parse_from_opencode(title: &str, session_id: &str, updated: i64, pid: Option<u32>, is_running: bool, directory: &str) -> Option<Self> {
+    fn parse_from_opencode(
+        title: &str,
+        session_id: &str,
+        updated: i64,
+        pid: Option<u32>,
+        is_running: bool,
+        directory: &str,
+    ) -> Option<Self> {
         if !title.starts_with("octopod:") {
             return None;
         }
-        
+
         let parts: Vec<&str> = title.split(':').collect();
         if parts.len() < 3 {
             return None;
         }
-        
+
         let task_id = parts.get(1).map(|s| s.to_string());
         let task_title = parts[2..].join(":");
-        
+
         Some(Self {
             session_id: session_id.to_string(),
             title: task_title,
@@ -199,7 +206,7 @@ impl DepartmentApp {
 
     fn fetch_sessions(&self) -> Vec<AgentSessionInfo> {
         use std::process::Command;
-        
+
         Command::new("opencode")
             .args(["session", "list", "--format", "json"])
             .output()
@@ -215,7 +222,14 @@ impl DepartmentApp {
                                 let session_id = s.get("id")?.as_str()?.to_string();
                                 let updated = s.get("updated")?.as_i64().unwrap_or(0);
                                 let directory = s.get("directory")?.as_str()?.to_string();
-                                AgentSessionInfo::parse_from_opencode(&title, &session_id, updated, None, true, &directory)
+                                AgentSessionInfo::parse_from_opencode(
+                                    &title,
+                                    &session_id,
+                                    updated,
+                                    None,
+                                    true,
+                                    &directory,
+                                )
                             })
                             .collect()
                     })
@@ -362,15 +376,13 @@ impl DepartmentApp {
                     if self.selected_task_index > 0 {
                         self.selected_task_index -= 1;
                     }
-                } else if self.active_view == 1
-                    && self.selected_task_index > 0 {
-                        self.selected_task_index -= 1;
-                    } else if self.active_view == 4
-                    && self.selected_agent_index > 0 {
-                        self.selected_agent_index -= 1;
-                        if self.selected_agent_index < self.agent_scroll_offset {
-                            self.agent_scroll_offset = self.selected_agent_index;
-                        }
+                } else if self.active_view == 1 && self.selected_task_index > 0 {
+                    self.selected_task_index -= 1;
+                } else if self.active_view == 4 && self.selected_agent_index > 0 {
+                    self.selected_agent_index -= 1;
+                    if self.selected_agent_index < self.agent_scroll_offset {
+                        self.agent_scroll_offset = self.selected_agent_index;
+                    }
                 }
             }
             KeyCode::Down => {
@@ -385,9 +397,10 @@ impl DepartmentApp {
                         self.selected_task_index += 1;
                     }
                 } else if self.active_view == 1
-                    && self.selected_task_index < self.tasks.len().saturating_sub(1) {
-                        self.selected_task_index += 1;
-                    } else if self.active_view == 4 {
+                    && self.selected_task_index < self.tasks.len().saturating_sub(1)
+                {
+                    self.selected_task_index += 1;
+                } else if self.active_view == 4 {
                     // Navigation in agents view - will be validated against session count in render
                     self.selected_agent_index += 1;
                 }
@@ -577,20 +590,20 @@ impl DepartmentApp {
 
     async fn kill_selected_agent(&mut self) {
         use std::process::Command;
-        
+
         let sessions = self.fetch_sessions();
-        
+
         if let Some(session) = sessions.get(self.selected_agent_index) {
             if session.session_id.is_empty() {
                 self.error_message = Some("Cannot kill - no session ID".to_string());
                 return;
             }
-            
+
             // Use opencode CLI to delete the session
             let result = Command::new("opencode")
                 .args(["session", "delete", &session.session_id])
                 .output();
-            
+
             match result {
                 Ok(output) if output.status.success() => {
                     info!("Deleted session {}", session.session_id);
@@ -598,22 +611,24 @@ impl DepartmentApp {
                 Ok(output) => {
                     let _stderr = String::from_utf8_lossy(&output.stderr);
                     // If session delete fails, try to kill the process anyway
-                    let title_pattern = format!("octopod:{}:", session.task_id.as_deref().unwrap_or(""));
-                    let _ = Command::new("ps")
-                        .args(["aux"])
-                        .output()
-                        .map(|output| {
-                            String::from_utf8_lossy(&output.stdout).lines()
-                                .filter(|line| line.contains("opencode"))
-                                .filter(|line| !line.contains("grep"))
-                                .filter(|line| line.contains(&title_pattern))
-                                .filter_map(|line| line.split_whitespace().nth(1))
-                                .filter_map(|s| s.parse::<u32>().ok())
-                                .for_each(|pid| {
-                                    let _ = Command::new("kill").arg(pid.to_string()).output();
-                                })
-                        });
-                    info!("Deleted session and killed process for {}", session.session_id);
+                    let title_pattern =
+                        format!("octopod:{}:", session.task_id.as_deref().unwrap_or(""));
+                    let _ = Command::new("ps").args(["aux"]).output().map(|output| {
+                        String::from_utf8_lossy(&output.stdout)
+                            .lines()
+                            .filter(|line| line.contains("opencode"))
+                            .filter(|line| !line.contains("grep"))
+                            .filter(|line| line.contains(&title_pattern))
+                            .filter_map(|line| line.split_whitespace().nth(1))
+                            .filter_map(|s| s.parse::<u32>().ok())
+                            .for_each(|pid| {
+                                let _ = Command::new("kill").arg(pid.to_string()).output();
+                            })
+                    });
+                    info!(
+                        "Deleted session and killed process for {}",
+                        session.session_id
+                    );
                 }
                 Err(e) => {
                     self.error_message = Some(format!("Failed to delete session: {}", e));
@@ -624,7 +639,7 @@ impl DepartmentApp {
 
     fn show_logs_for_selected(&mut self) {
         use std::process::Command;
-        
+
         let sessions: Vec<AgentSessionInfo> = Command::new("opencode")
             .args(["session", "list", "--format", "json"])
             .output()
@@ -640,7 +655,14 @@ impl DepartmentApp {
                                 let session_id = s.get("id")?.as_str()?.to_string();
                                 let updated = s.get("updated")?.as_i64().unwrap_or(0);
                                 let directory = s.get("directory")?.as_str()?.to_string();
-                                AgentSessionInfo::parse_from_opencode(&title, &session_id, updated, None, true, &directory)
+                                AgentSessionInfo::parse_from_opencode(
+                                    &title,
+                                    &session_id,
+                                    updated,
+                                    None,
+                                    true,
+                                    &directory,
+                                )
                             })
                             .collect()
                     })
@@ -658,26 +680,47 @@ impl DepartmentApp {
 
     async fn spawn_agent_manually(&mut self) {
         use std::process::Command;
-        
+
         let task_title = format!("Manual agent in {}", self.department_name);
-        let task_id = format!("manual_{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("xxx"));
+        let task_id = format!(
+            "manual_{}",
+            uuid::Uuid::new_v4()
+                .to_string()
+                .split('-')
+                .next()
+                .unwrap_or("xxx")
+        );
         let title = format!("octopod:task_{}:{}", task_id, task_title);
-        
+
         let session_name = format!("{}-agent", self.department_name.to_lowercase());
         let cmd = format!("opencode run --title '{}' 'Work on: {}'", title, task_title);
-        
-        let project_dir = std::env::current_dir().unwrap_or_default().display().to_string();
-        
+
+        let project_dir = std::env::current_dir()
+            .unwrap_or_default()
+            .display()
+            .to_string();
+
         Command::new("tmux")
-            .args(["new-session", "-d", "-s", &session_name, "-c", &project_dir, "--", "bash", "-c", &cmd])
+            .args([
+                "new-session",
+                "-d",
+                "-s",
+                &session_name,
+                "-c",
+                &project_dir,
+                "--",
+                "bash",
+                "-c",
+                &cmd,
+            ])
             .spawn()
             .ok();
-        
+
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        
+
         self.cached_sessions = self.fetch_sessions();
         self.sessions_cache_time = std::time::Instant::now();
-        
+
         self.error_message = Some(format!(
             "Agent '{}' running in tmux session '{}'.\nSwitch to it with: tmux switch-client -t {}",
             task_title, session_name, session_name
@@ -689,7 +732,7 @@ impl DepartmentApp {
             let session_age = chrono::DateTime::from_timestamp(session.updated / 1000, 0)
                 .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
                 .unwrap_or_else(|| "unknown".to_string());
-            
+
             self.error_message = Some(format!(
                 "Session: '{}'\nDirectory: {}\nLast active: {}\n\nTo resume: cd to that directory and run opencode",
                 session.title,
@@ -995,7 +1038,11 @@ Press ? or Esc to close";
 
         let block = Block::default()
             .title(" Help ")
-            .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .title_style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Cyan));
 
@@ -1008,23 +1055,33 @@ Press ? or Esc to close";
 
     fn render_logs_overlay(&self, frame: &mut Frame, size: Rect) {
         use std::process::Command;
-        
+
         let session_id = match &self.show_logs_for_session {
             Some(id) => id.clone(),
             None => return,
         };
-        
+
         // Get session info
         let (title, created, updated) = Command::new("opencode")
             .args(["session", "list", "--format", "json"])
             .output()
             .map(|output| {
                 let output_str = String::from_utf8_lossy(&output.stdout);
-                let sessions: Vec<serde_json::Value> = serde_json::from_str(&output_str).unwrap_or_default();
-                let session = sessions.iter().find(|s| s.get("id").and_then(|v| v.as_str()) == Some(&session_id));
-                let title = session.and_then(|s| s.get("title").and_then(|v| v.as_str())).unwrap_or("Unknown").to_string();
-                let created = session.and_then(|s| s.get("created").and_then(|v| v.as_i64())).unwrap_or(0);
-                let updated = session.and_then(|s| s.get("updated").and_then(|v| v.as_i64())).unwrap_or(0);
+                let sessions: Vec<serde_json::Value> =
+                    serde_json::from_str(&output_str).unwrap_or_default();
+                let session = sessions
+                    .iter()
+                    .find(|s| s.get("id").and_then(|v| v.as_str()) == Some(&session_id));
+                let title = session
+                    .and_then(|s| s.get("title").and_then(|v| v.as_str()))
+                    .unwrap_or("Unknown")
+                    .to_string();
+                let created = session
+                    .and_then(|s| s.get("created").and_then(|v| v.as_i64()))
+                    .unwrap_or(0);
+                let updated = session
+                    .and_then(|s| s.get("updated").and_then(|v| v.as_i64()))
+                    .unwrap_or(0);
                 (title, created, updated)
             })
             .unwrap_or_else(|_| ("Unknown".to_string(), 0, 0));
@@ -1038,7 +1095,11 @@ Press ? or Esc to close";
 
         let block = Block::default()
             .title(format!(" Session Info: {} ", truncate(&title, 40)))
-            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            .title_style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Yellow));
 
@@ -1053,7 +1114,7 @@ Press ? or Esc to close";
         } else {
             "Unknown".to_string()
         };
-        
+
         let updated_str = if updated > 0 {
             chrono::DateTime::from_timestamp(updated / 1000, 0)
                 .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
@@ -1071,8 +1132,7 @@ Press ? or Esc to close";
             session_id
         );
 
-        let paragraph = Paragraph::new(log_text)
-            .style(Style::default().fg(Color::White));
+        let paragraph = Paragraph::new(log_text).style(Style::default().fg(Color::White));
 
         frame.render_widget(paragraph, inner);
     }
@@ -1353,9 +1413,9 @@ Press ? or Esc to close";
                         .title
                         .to_lowercase()
                         .contains(&self.list_filter.search.to_lowercase())
-                    {
-                        return false;
-                    }
+                {
+                    return false;
+                }
                 true
             })
             .collect();
@@ -1481,11 +1541,8 @@ Press ? or Esc to close";
             .state
             .get_task_content(task)
             .unwrap_or_else(|_| "No file content. Press [e] to create it.".to_string());
-        let content_lines: Vec<ListItem> = file_content
-            .lines()
-            .take(50)
-            .map(ListItem::new)
-            .collect();
+        let content_lines: Vec<ListItem> =
+            file_content.lines().take(50).map(ListItem::new).collect();
 
         let list = List::new(content_lines)
             .block(
@@ -1575,9 +1632,9 @@ Press ? or Esc to close";
 
     fn render_agents_tab(&self, frame: &mut Frame, area: Rect) {
         use std::process::Command;
-        
+
         let daemon_session = format!("octopod-{}-daemon", self.department_id);
-        
+
         let is_daemon_running = Command::new("tmux")
             .args(["has-session", "-t", &daemon_session])
             .output()
@@ -1603,14 +1660,18 @@ Press ? or Esc to close";
         }
 
         let mut items = vec![];
-        
+
         // Daemon row (not selectable)
         if is_daemon_running {
-            items.push(ListItem::new(format!("● Daemon: {} - Running", daemon_session))
-                .style(Style::default().fg(Color::Green)));
+            items.push(
+                ListItem::new(format!("● Daemon: {} - Running", daemon_session))
+                    .style(Style::default().fg(Color::Green)),
+            );
         } else {
-            items.push(ListItem::new(format!("○ Daemon: {} - Stopped", daemon_session))
-                .style(Style::default().fg(Color::DarkGray)));
+            items.push(
+                ListItem::new(format!("○ Daemon: {} - Stopped", daemon_session))
+                    .style(Style::default().fg(Color::DarkGray)),
+            );
         }
 
         items.push(ListItem::new("").style(Style::default()));
@@ -1618,56 +1679,85 @@ Press ? or Esc to close";
         if !sessions.is_empty() {
             let visible_rows = ((inner.height as usize).saturating_sub(8)).max(1);
             let session_count = sessions.len();
-            
+
             // Clamp selected index to valid range
-            let selected = self.selected_agent_index.min(session_count.saturating_sub(1));
-            
+            let selected = self
+                .selected_agent_index
+                .min(session_count.saturating_sub(1));
+
             // Calculate visible range
             let start_idx = selected.saturating_sub(visible_rows.saturating_sub(1));
             let end_idx = (start_idx + visible_rows).min(session_count);
-            
-            items.push(ListItem::new(format!("{} Octopod Agents:", session_count))
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
-            
+
+            items.push(
+                ListItem::new(format!("{} Octopod Agents:", session_count)).style(
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            );
+
             for (i, session) in sessions.iter().enumerate().take(end_idx).skip(start_idx) {
                 let is_selected = i == selected;
                 let style = if is_selected {
-                    Style::default().fg(Color::Black).bg(Color::Rgb(255, 127, 80))
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(255, 127, 80))
                 } else {
                     Style::default().fg(Color::White)
                 };
-                
-                let status = if session.is_running { "running" } else { "stopped" };
+
+                let status = if session.is_running {
+                    "running"
+                } else {
+                    "stopped"
+                };
                 let task_id = session.task_id.as_deref().unwrap_or("?");
                 let time_ago = time_ago(session.updated);
-                
-                items.push(ListItem::new(format!("  {}{} [task:{}] {} {}", 
-                    if is_selected { ">" } else { " " },
-                    truncate(&session.title, 30),
-                    truncate(task_id, 10),
-                    status,
-                    time_ago
-                )).style(style));
+
+                items.push(
+                    ListItem::new(format!(
+                        "  {}{} [task:{}] {} {}",
+                        if is_selected { ">" } else { " " },
+                        truncate(&session.title, 30),
+                        truncate(task_id, 10),
+                        status,
+                        time_ago
+                    ))
+                    .style(style),
+                );
             }
-            
+
             if session_count > visible_rows {
-                items.push(ListItem::new(format!("  Showing {}-{} of {}", start_idx + 1, end_idx, session_count))
-                    .style(Style::default().fg(Color::DarkGray)));
+                items.push(
+                    ListItem::new(format!(
+                        "  Showing {}-{} of {}",
+                        start_idx + 1,
+                        end_idx,
+                        session_count
+                    ))
+                    .style(Style::default().fg(Color::DarkGray)),
+                );
             }
-            
+
             items.push(ListItem::new("").style(Style::default()));
-            items.push(ListItem::new("[s] spawn  [↑↓] navigate  [x] kill  [Enter] resume  [v] info")
-                .style(Style::default().fg(Color::DarkGray)));
+            items.push(
+                ListItem::new("[s] spawn  [↑↓] navigate  [x] kill  [Enter] resume  [v] info")
+                    .style(Style::default().fg(Color::DarkGray)),
+            );
         } else {
-            items.push(ListItem::new("No octopod agents active")
-                .style(Style::default().fg(Color::DarkGray)));
+            items.push(
+                ListItem::new("No octopod agents active")
+                    .style(Style::default().fg(Color::DarkGray)),
+            );
             items.push(ListItem::new("").style(Style::default()));
-            items.push(ListItem::new("[s] spawn agent manually")
-                .style(Style::default().fg(Color::DarkGray)));
+            items.push(
+                ListItem::new("[s] spawn agent manually")
+                    .style(Style::default().fg(Color::DarkGray)),
+            );
         }
 
-        let list = List::new(items)
-            .block(Block::default());
+        let list = List::new(items).block(Block::default());
 
         frame.render_widget(list, inner);
     }
@@ -1679,7 +1769,7 @@ fn time_ago(timestamp: i64) -> String {
     }
     let now = chrono::Utc::now().timestamp_millis();
     let diff = now - timestamp;
-    
+
     if diff < 60000 {
         "<1m ago".to_string()
     } else if diff < 3600000 {

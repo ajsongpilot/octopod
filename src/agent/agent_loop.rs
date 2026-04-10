@@ -1,8 +1,10 @@
+use crate::agent::ai_client::OpenCodeClient;
 use crate::state::{
-    entities::{Agent, ActivityLogEntry, Initiative, Meeting, MeetingParticipant, Roadmap, Task, TaskStatus},
+    entities::{
+        ActivityLogEntry, Agent, Initiative, Meeting, MeetingParticipant, Roadmap, Task, TaskStatus,
+    },
     StateManager,
 };
-use crate::agent::ai_client::OpenCodeClient;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use std::sync::Arc;
@@ -73,12 +75,18 @@ impl AgentLoop {
         ctx.clone()
     }
 
-    async fn log_activity(&self, action: &str, target_type: Option<&str>, target_id: Option<&str>, details: Option<&str>) -> Result<()> {
+    async fn log_activity(
+        &self,
+        action: &str,
+        target_type: Option<&str>,
+        target_id: Option<&str>,
+        details: Option<&str>,
+    ) -> Result<()> {
         let ctx = match self.get_context().await {
             Some(ctx) => ctx,
             None => return Ok(()),
         };
-        
+
         let company_id = match self.state.current_company().await {
             Some(id) => id,
             None => return Ok(()),
@@ -94,7 +102,7 @@ impl AgentLoop {
             target_id: target_id.map(|s| s.to_string()),
             details_json: details.map(|s| s.to_string()),
         };
-        
+
         self.state.activities().log(&entry).await?;
         Ok(())
     }
@@ -194,41 +202,59 @@ impl AgentLoop {
         let task = self.state.tasks().find_by_id(task_id).await?;
         if let Some(task) = task {
             let ctx = self.get_context().await.context("Agent context not set")?;
-            
+
             if let Some(client) = OpenCodeClient::from_config()? {
                 let project_dir = std::env::current_dir()
                     .map(|p| p.display().to_string())
                     .unwrap_or_else(|_| ".".to_string());
-                
-                match client.spawn_task(task_id, &task.title, &project_dir, &ctx.department_slug).await {
+
+                match client
+                    .spawn_task(task_id, &task.title, &project_dir, &ctx.department_slug)
+                    .await
+                {
                     Ok(pid) => {
                         info!("Spawned opencode for task {} with PID {}", task_id, pid);
-                        
-                        let _ = self.log_activity(
-                            "spawned_agent",
-                            Some("task"),
-                            Some(task_id),
-                            Some(&format!("Agent started working on: {}", task.title)),
-                        ).await;
-                         
+
+                        let _ = self
+                            .log_activity(
+                                "spawned_agent",
+                                Some("task"),
+                                Some(task_id),
+                                Some(&format!("Agent started working on: {}", task.title)),
+                            )
+                            .await;
+
                         let agent_session = crate::state::entities::AgentSession::new(
                             task_id,
                             &ctx.department_id,
                             "pending_capture",
                         );
                         self.state.agent_sessions().create(&agent_session).await?;
-                        
+
                         let agent_session_id = agent_session.id.clone();
                         let captured_pid = pid;
                         let task_id_clone = task_id.to_string();
-                        
+
                         let state = self.state.clone();
                         tokio::spawn(async move {
-                            if let Some(session_id) = client.capture_session_id(&task_id_clone).await.ok().flatten() {
-                                if let Err(e) = state.agent_sessions().update_session_id(&agent_session_id, &session_id).await {
+                            if let Some(session_id) = client
+                                .capture_session_id(&task_id_clone)
+                                .await
+                                .ok()
+                                .flatten()
+                            {
+                                if let Err(e) = state
+                                    .agent_sessions()
+                                    .update_session_id(&agent_session_id, &session_id)
+                                    .await
+                                {
                                     warn!("Failed to update session ID: {}", e);
                                 }
-                                if let Err(e) = state.agent_sessions().update_process_id(&agent_session_id, captured_pid).await {
+                                if let Err(e) = state
+                                    .agent_sessions()
+                                    .update_process_id(&agent_session_id, captured_pid)
+                                    .await
+                                {
                                     warn!("Failed to update process ID: {}", e);
                                 }
                                 info!("Captured session {} for task {}", session_id, task_id_clone);
@@ -242,7 +268,7 @@ impl AgentLoop {
             } else {
                 warn!("opencode not available - skipping AI task execution");
             }
-            
+
             if task.status == TaskStatus::InProgress {
                 let mut updated_task = task.clone();
                 updated_task.status = TaskStatus::Review;

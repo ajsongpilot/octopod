@@ -11,7 +11,9 @@ pub struct OpenCodeClient {
 
 impl OpenCodeClient {
     pub fn new(timeout_secs: u64) -> Self {
-        Self { _timeout_secs: timeout_secs }
+        Self {
+            _timeout_secs: timeout_secs,
+        }
     }
 
     pub fn from_config() -> Result<Option<Self>> {
@@ -31,17 +33,23 @@ impl OpenCodeClient {
 
     fn read_cortex_file(path: &Path) -> String {
         std::fs::read_to_string(path)
-            .map(|s| format!("\n\n{}:\n{}\n", path.file_name().unwrap().to_string_lossy(), s))
+            .map(|s| {
+                format!(
+                    "\n\n{}:\n{}\n",
+                    path.file_name().unwrap().to_string_lossy(),
+                    s
+                )
+            })
             .unwrap_or_default()
     }
 
     fn build_context_prompt(project_dir: &str, department_slug: &str) -> String {
         let base = Path::new(project_dir).join(".octopod").join("cortex");
-        
+
         let company_context = Self::read_cortex_file(&base.join("company").join("OVERVIEW.md"));
-        
+
         let dept_context = Self::read_cortex_file(&base.join(department_slug).join("CONTEXT.md"));
-        
+
         if company_context.is_empty() && dept_context.is_empty() {
             String::new()
         } else {
@@ -60,15 +68,14 @@ impl OpenCodeClient {
         department_slug: &str,
     ) -> Result<u32> {
         let title = format!("octopod:task_{}:{}", task_id, task_title);
-        
+
         let context_prompt = Self::build_context_prompt(project_dir, department_slug);
-        
+
         let prompt = format!(
             "You are working on this task: {}.{}Focus on completing it.",
-            task_title,
-            context_prompt
+            task_title, context_prompt
         );
-        
+
         let child = tokio::process::Command::new("opencode")
             .args(["run", "--title", &title])
             .arg(prompt)
@@ -78,24 +85,24 @@ impl OpenCodeClient {
 
         let pid = child.id().context("Failed to get PID")?;
         info!("Spawned opencode task {} with PID {}", task_id, pid);
-        
+
         Ok(pid)
     }
 
     pub async fn capture_session_id(&self, task_id: &str) -> Result<Option<String>> {
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        
+
         let output = Command::new("opencode")
             .args(["session", "list", "--format", "json"])
             .output()
             .context("Failed to list sessions")?;
 
-        let sessions: Vec<SessionInfo> = serde_json::from_slice(&output.stdout)
-            .context("Failed to parse sessions")?;
+        let sessions: Vec<SessionInfo> =
+            serde_json::from_slice(&output.stdout).context("Failed to parse sessions")?;
 
         let pattern = format!("octopod:task_{}:", task_id);
         let session = sessions.iter().find(|s| s.title.starts_with(&pattern));
-        
+
         Ok(session.map(|s| s.id.clone()))
     }
 
@@ -105,8 +112,8 @@ impl OpenCodeClient {
             .output()
             .context("Failed to list sessions")?;
 
-        let all_sessions: Vec<SessionInfo> = serde_json::from_slice(&output.stdout)
-            .context("Failed to parse sessions")?;
+        let all_sessions: Vec<SessionInfo> =
+            serde_json::from_slice(&output.stdout).context("Failed to parse sessions")?;
 
         let octopod_sessions: Vec<SessionInfo> = all_sessions
             .into_iter()

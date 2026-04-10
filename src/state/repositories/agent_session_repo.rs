@@ -33,7 +33,7 @@ impl AgentSessionRepository {
 
     pub async fn find_by_task(&self, task_id: &str) -> Result<Option<AgentSession>> {
         let session = sqlx::query_as::<_, AgentSession>(
-            "SELECT * FROM agent_sessions WHERE task_id = ? ORDER BY created_at DESC LIMIT 1"
+            "SELECT * FROM agent_sessions WHERE task_id = ? ORDER BY created_at DESC LIMIT 1",
         )
         .bind(task_id)
         .fetch_optional(&self.pool)
@@ -43,7 +43,7 @@ impl AgentSessionRepository {
 
     pub async fn find_by_department(&self, department_id: &str) -> Result<Vec<AgentSession>> {
         let sessions = sqlx::query_as::<_, AgentSession>(
-            "SELECT * FROM agent_sessions WHERE department_id = ? ORDER BY created_at DESC"
+            "SELECT * FROM agent_sessions WHERE department_id = ? ORDER BY created_at DESC",
         )
         .bind(department_id)
         .fetch_all(&self.pool)
@@ -51,7 +51,10 @@ impl AgentSessionRepository {
         Ok(sessions)
     }
 
-    pub async fn find_active_by_department(&self, department_id: &str) -> Result<Vec<AgentSession>> {
+    pub async fn find_active_by_department(
+        &self,
+        department_id: &str,
+    ) -> Result<Vec<AgentSession>> {
         let sessions = sqlx::query_as::<_, AgentSession>(
             "SELECT * FROM agent_sessions WHERE department_id = ? AND status = 'active' ORDER BY created_at DESC"
         )
@@ -63,11 +66,13 @@ impl AgentSessionRepository {
 
     pub async fn update_status(&self, id: &str, status: &str) -> Result<()> {
         if status == "stopped" || status == "completed" {
-            sqlx::query("UPDATE agent_sessions SET status = ?, ended_at = CURRENT_TIMESTAMP WHERE id = ?")
-                .bind(status)
-                .bind(id)
-                .execute(&self.pool)
-                .await?;
+            sqlx::query(
+                "UPDATE agent_sessions SET status = ?, ended_at = CURRENT_TIMESTAMP WHERE id = ?",
+            )
+            .bind(status)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
         } else {
             sqlx::query("UPDATE agent_sessions SET status = ? WHERE id = ?")
                 .bind(status)

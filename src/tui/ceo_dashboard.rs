@@ -9,7 +9,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, BorderType, Cell, Paragraph, Row, Table, Tabs, Wrap},
+    widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, Tabs, Wrap},
     Frame, Terminal,
 };
 use std::{
@@ -20,7 +20,10 @@ use std::{
 use tracing::{error, info};
 
 use crate::{
-    platform::spawn_manager::{is_daemon_running, is_department_running, kill_daemon, kill_department, spawn_agent_daemon, spawn_department},
+    platform::spawn_manager::{
+        is_daemon_running, is_department_running, kill_daemon, kill_department, spawn_agent_daemon,
+        spawn_department,
+    },
     state::{Priority as DbPriority, StateManager},
 };
 
@@ -468,7 +471,7 @@ impl DashboardApp {
             let is_running = is_department_running(&dept.id, &dept.name);
             let daemon_running = is_daemon_running(&dept.id);
             dept.daemon_running = daemon_running;
-            
+
             match (&dept.status, is_running) {
                 (DepartmentStatus::Stopped, true) => dept.status = DepartmentStatus::Running,
                 (DepartmentStatus::Starting, true) => dept.status = DepartmentStatus::Running,
@@ -484,7 +487,7 @@ impl DashboardApp {
             self.show_help = !self.show_help;
             return;
         }
-        
+
         // If help is showing, only Esc or ? closes it
         if self.show_help {
             if key == KeyCode::Esc {
@@ -492,7 +495,7 @@ impl DashboardApp {
             }
             return;
         }
-        
+
         match key {
             KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
             KeyCode::Char('1') => self.active_tab = 0,
@@ -593,9 +596,15 @@ impl DashboardApp {
                 if self.active_tab == 3 {
                     // Cycle through: All -> Active -> Done
                     match self.initiative_view {
-                        InitiativeViewMode::All => self.initiative_view = InitiativeViewMode::Active,
-                        InitiativeViewMode::Active => self.initiative_view = InitiativeViewMode::Completed,
-                        InitiativeViewMode::Completed => self.initiative_view = InitiativeViewMode::All,
+                        InitiativeViewMode::All => {
+                            self.initiative_view = InitiativeViewMode::Active
+                        }
+                        InitiativeViewMode::Active => {
+                            self.initiative_view = InitiativeViewMode::Completed
+                        }
+                        InitiativeViewMode::Completed => {
+                            self.initiative_view = InitiativeViewMode::All
+                        }
                     }
                 }
             }
@@ -669,19 +678,19 @@ impl DashboardApp {
             }
 
             let dept_id = dept.id.clone();
-            
+
             // Kill daemon tmux session
             let _ = kill_daemon(&dept_id);
             info!("Killed daemon for {}", dept.name);
-            
+
             // Kill all opencode processes for this department
             let _title_pattern = "octopod:task_:".to_string();
-            if let Ok(output) = std::process::Command::new("ps")
-                .args(["aux"])
-                .output()
-            {
+            if let Ok(output) = std::process::Command::new("ps").args(["aux"]).output() {
                 for line in String::from_utf8_lossy(&output.stdout).lines() {
-                    if line.contains("opencode") && !line.contains("grep") && line.contains(&dept_id) {
+                    if line.contains("opencode")
+                        && !line.contains("grep")
+                        && line.contains(&dept_id)
+                    {
                         if let Some(pid_str) = line.split_whitespace().nth(1) {
                             if let Ok(pid) = pid_str.parse::<u32>() {
                                 let _ = std::process::Command::new("kill")
@@ -699,12 +708,12 @@ impl DashboardApp {
             }
         }
     }
-    
+
     fn confirm_kill_daemon(&mut self) {
         self.show_kill_confirmation = false;
         self.kill_agent_selected();
     }
-    
+
     fn cancel_kill_daemon(&mut self) {
         self.show_kill_confirmation = false;
     }
@@ -751,7 +760,9 @@ impl DashboardApp {
                 .filter(|i| {
                     matches!(
                         i.status,
-                        InitiativeStatus::Completed | InitiativeStatus::Closed | InitiativeStatus::Cancelled
+                        InitiativeStatus::Completed
+                            | InitiativeStatus::Closed
+                            | InitiativeStatus::Cancelled
                     )
                 })
                 .collect(),
@@ -832,17 +843,20 @@ impl DashboardApp {
 
     fn create_roadmap_sync(&mut self) {
         use crate::state::entities::Roadmap as DbRoadmap;
-        
+
         let company_id = self.company_id.clone();
         let now = chrono::Utc::now();
         let quarter = ((now.month0() / 3) + 1) as i32;
         let year = now.year();
-        let quarter_start = chrono::NaiveDate::from_ymd_opt(year, (quarter * 3 - 2) as u32, 1).unwrap();
-        let quarter_end = chrono::NaiveDate::from_ymd_opt(year, (quarter * 3 + 1) as u32, 1).unwrap() - chrono::Duration::days(1);
+        let quarter_start =
+            chrono::NaiveDate::from_ymd_opt(year, (quarter * 3 - 2) as u32, 1).unwrap();
+        let quarter_end = chrono::NaiveDate::from_ymd_opt(year, (quarter * 3 + 1) as u32, 1)
+            .unwrap()
+            - chrono::Duration::days(1);
         let roadmap_name = format!("Q{} {} Planning", quarter, year);
         let qs = quarter_start.and_hms_opt(0, 0, 0).unwrap().and_utc();
         let qe = quarter_end.and_hms_opt(23, 59, 59).unwrap().and_utc();
-        
+
         // Generate roadmap upfront - use same ID for both UI and DB
         let roadmap_id = uuid::Uuid::new_v4().to_string();
         let db_roadmap = DbRoadmap {
@@ -858,17 +872,21 @@ impl DashboardApp {
             created_at: now,
             updated_at: now,
         };
-        
+
         // Add to UI immediately with the same ID
         self.roadmaps.push(Roadmap {
             id: roadmap_id[..8].to_string(),
             name: roadmap_name.clone(),
             description: String::new(),
-            period: format!("{} - {}", quarter_start.format("%Y-%m-%d"), quarter_end.format("%Y-%m-%d")),
+            period: format!(
+                "{} - {}",
+                quarter_start.format("%Y-%m-%d"),
+                quarter_end.format("%Y-%m-%d")
+            ),
             status: RoadmapStatus::Draft,
             db_roadmap_id: roadmap_id.clone(),
         });
-        
+
         // Save to DB in background thread (can't use block_on in async context)
         let state = self.state.clone();
         let roadmap_name_for_msg = roadmap_name.clone();
@@ -879,7 +897,7 @@ impl DashboardApp {
                 Err(e) => error!("Failed to create roadmap: {}", e),
             }
         });
-        
+
         self.error_message = Some("Roadmap created!".to_string());
     }
 
@@ -891,7 +909,7 @@ impl DashboardApp {
 
         // Use the most recently created roadmap (last in list)
         let roadmap_id = self.roadmaps.last().unwrap().db_roadmap_id.clone();
-        
+
         // Find first non-CEO department
         let (dept_id, dept_name) = self
             .departments
@@ -902,7 +920,7 @@ impl DashboardApp {
 
         // Generate initiative ID upfront - use same ID for both UI and DB
         let initiative_id = uuid::Uuid::new_v4().to_string();
-        
+
         // Immediately add to UI with the same ID
         self.initiatives.push(Initiative {
             id: initiative_id[..8].to_string(),
@@ -951,7 +969,11 @@ impl DashboardApp {
         if let Some(md_title) = self.state.get_initiative_title_from_file(&initiative_id) {
             if md_title != initiative.title {
                 // Find and update in the full list
-                if let Some(full_init) = self.initiatives.iter_mut().find(|i| i.db_initiative_id == initiative_id) {
+                if let Some(full_init) = self
+                    .initiatives
+                    .iter_mut()
+                    .find(|i| i.db_initiative_id == initiative_id)
+                {
                     full_init.title = md_title.clone();
                     info!("Synced initiative title: {}", md_title);
                 }
@@ -984,10 +1006,14 @@ impl DashboardApp {
         let initiative_title = initiative.title.clone();
 
         // Get the markdown file path
-        let file_path = self.state.initiative_file_manager().get_file_path(&initiative_id);
-        
+        let file_path = self
+            .state
+            .initiative_file_manager()
+            .get_file_path(&initiative_id);
+
         if !file_path.exists() {
-            self.error_message = Some("No markdown file found. Create initiative first.".to_string());
+            self.error_message =
+                Some("No markdown file found. Create initiative first.".to_string());
             return;
         }
 
@@ -1017,8 +1043,7 @@ Please provide an improved version with:
 3. 3-5 KEY RESULTS that are measurable (use format: KR1: [Measurable outcome])
 
 Only output the improved markdown content - do not include any preamble or explanation."#,
-            initiative_title,
-            current_content
+            initiative_title, current_content
         );
 
         // Invoke ironclaw in a background thread
@@ -1032,9 +1057,10 @@ Only output the improved markdown content - do not include any preamble or expla
                     if result.status.success() {
                         let ironclaw_response = String::from_utf8_lossy(&result.stdout);
                         // Only use response if it's substantial (not an error or empty)
-                        if !ironclaw_response.trim().is_empty() 
+                        if !ironclaw_response.trim().is_empty()
                             && !ironclaw_response.contains("error")
-                            && ironclaw_response.len() > 100 {
+                            && ironclaw_response.len() > 100
+                        {
                             if let Err(e) = std::fs::write(&file_path, ironclaw_response.as_ref()) {
                                 error!("Failed to write ironclaw response: {}", e);
                             } else {
@@ -1044,7 +1070,10 @@ Only output the improved markdown content - do not include any preamble or expla
                             // Fallback: just open in editor if response is empty/error
                             if let Err(e) = std::process::Command::new("sh")
                                 .arg("-c")
-                                .arg(format!("tmux new-window -n 'initiative-draft' '$EDITOR {}'", file_path.display()))
+                                .arg(format!(
+                                    "tmux new-window -n 'initiative-draft' '$EDITOR {}'",
+                                    file_path.display()
+                                ))
                                 .spawn()
                             {
                                 error!("Failed to spawn editor: {}", e);
@@ -1061,7 +1090,8 @@ Only output the improved markdown content - do not include any preamble or expla
             }
         });
 
-        self.error_message = Some("Ironclaw is drafting... Check tmux window for results.".to_string());
+        self.error_message =
+            Some("Ironclaw is drafting... Check tmux window for results.".to_string());
     }
 
     fn ask_agent_sync(&mut self) {
@@ -1077,7 +1107,10 @@ Only output the improved markdown content - do not include any preamble or expla
         let initiative = visible[self.selected_initiative];
         let initiative_id = initiative.db_initiative_id.clone();
         let initiative_title = initiative.title.clone();
-        let file_path = self.state.initiative_file_manager().get_file_path(&initiative_id);
+        let file_path = self
+            .state
+            .initiative_file_manager()
+            .get_file_path(&initiative_id);
 
         if !file_path.exists() {
             self.error_message = Some("No markdown file found.".to_string());
@@ -1096,7 +1129,8 @@ Only output the improved markdown content - do not include any preamble or expla
         self.error_message = Some("Opening Ironclaw chat... Check tmux window.".to_string());
 
         // Create an interactive tmux window for chatting with Ironclaw
-        let script = format!(r#"#!/bin/bash
+        let script = format!(
+            r#"#!/bin/bash
 set -e
 
 ORIGINAL_FILE="{file_path}"
@@ -1191,7 +1225,10 @@ User question: $user_input" 2>&1)
         fi
     fi
 done
-"#, title = initiative_title, file_path = file_path.display());
+"#,
+            title = initiative_title,
+            file_path = file_path.display()
+        );
 
         let script_path = format!("/tmp/octopod-ironclaw-chat-{}.sh", &initiative_id[..8]);
         if let Err(e) = std::fs::write(&script_path, script) {
@@ -1343,7 +1380,7 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
         _ => {}
     }
 
-        // Footer
+    // Footer
     let help: String = match app.active_tab {
         0 => "[s]pawn [c]lose [k]ill daemon [↑↓]nav [?]help [q]uit".to_string(),
         1 => {
@@ -1352,10 +1389,14 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
                 DecisionViewMode::HighPriority => "[p]ending [Q]CEO Queue [l]og",
                 DecisionViewMode::Log => "[p]ending [Q]CEO Queue [l]og",
             };
-            format!("[a]pprove [x]reject [e]dit [↑↓]nav {} [?]help [q]uit", view_hint)
+            format!(
+                "[a]pprove [x]reject [e]dit [↑↓]nav {} [?]help [q]uit",
+                view_hint
+            )
         }
         2 => "[↑↓]scroll [1/2/3/4]tabs [?]help [q]uit".to_string(),
-        3 => "[p]lan [i]nit [d]raft [a]sk [e]dit [v]iew [w]ip [r]efresh [↑↓]nav [?]help [q]uit".to_string(),
+        3 => "[p]lan [i]nit [d]raft [a]sk [e]dit [v]iew [w]ip [r]efresh [↑↓]nav [?]help [q]uit"
+            .to_string(),
         _ => "[Esc]quit".to_string(),
     };
     let footer = Paragraph::new(help)
@@ -1425,7 +1466,11 @@ GENERAL
 
     let block = Block::default()
         .title(" Help ")
-        .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .title_style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -1438,15 +1483,16 @@ GENERAL
 
 fn render_kill_confirmation(f: &mut Frame, app: &DashboardApp) {
     use std::process::Command;
-    
+
     let size = f.size();
-    
+
     // Get the selected department name
-    let dept_name = app.departments
+    let dept_name = app
+        .departments
         .get(app.selected_dept)
         .map(|d| d.name.clone())
         .unwrap_or_else(|| "Unknown".to_string());
-    
+
     // Query opencode sessions for this department to show what will be killed
     let sessions_to_kill: Vec<String> = Command::new("opencode")
         .args(["session", "list", "--format", "json"])
@@ -1465,7 +1511,11 @@ fn render_kill_confirmation(f: &mut Frame, app: &DashboardApp) {
                                 false
                             }
                         })
-                        .filter_map(|s| s.get("title").and_then(|t| t.as_str()).map(|t| t.to_string()))
+                        .filter_map(|s| {
+                            s.get("title")
+                                .and_then(|t| t.as_str())
+                                .map(|t| t.to_string())
+                        })
                         .collect()
                 })
                 .unwrap_or_default()
@@ -1473,7 +1523,7 @@ fn render_kill_confirmation(f: &mut Frame, app: &DashboardApp) {
         .unwrap_or_default();
 
     let session_count = sessions_to_kill.len();
-    
+
     let width = 60.min(size.width.saturating_sub(4));
     let height = if session_count > 0 { 12 } else { 8 };
     let left = (size.width - width) / 2;
@@ -1490,13 +1540,13 @@ fn render_kill_confirmation(f: &mut Frame, app: &DashboardApp) {
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    let mut lines = vec![
-        format!("Kill daemon for {}?", dept_name),
-        "".to_string(),
-    ];
-    
+    let mut lines = vec![format!("Kill daemon for {}?", dept_name), "".to_string()];
+
     if session_count > 0 {
-        lines.push(format!("This will kill {} opencode session(s):", session_count));
+        lines.push(format!(
+            "This will kill {} opencode session(s):",
+            session_count
+        ));
         for session in sessions_to_kill.iter().take(3) {
             lines.push(format!("  • {}", truncate(session, 50)));
         }
@@ -1506,7 +1556,7 @@ fn render_kill_confirmation(f: &mut Frame, app: &DashboardApp) {
     } else {
         lines.push("No active sessions.".to_string());
     }
-    
+
     lines.push("".to_string());
     lines.push("Sessions will persist in opencode and can be resumed.".to_string());
     lines.push("".to_string());
@@ -1547,7 +1597,7 @@ fn render_departments_tab(f: &mut Frame, app: &DashboardApp, area: Rect) {
                 DepartmentStatus::Running => ("Running", Color::Green),
                 DepartmentStatus::Error(_) => ("Error", Color::Red),
             };
-            
+
             // CEO has no agent
             let (daemon_status_text, daemon_color) = if dept.id == "ceo" {
                 ("N/A", Color::DarkGray)

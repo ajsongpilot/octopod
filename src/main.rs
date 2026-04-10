@@ -365,7 +365,7 @@ async fn main() -> Result<()> {
 
                 info!("Starting {} agent daemon (runs forever)", department);
                 println!("Starting {} agent daemon... Ctrl+C to stop", department);
-                
+
                 // Run forever
                 loop {
                     if let Err(e) = run_agent_loop(&state, &department, &agent_name).await {

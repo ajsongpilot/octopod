@@ -165,9 +165,8 @@ impl DecisionRepository {
 
     /// Get pending decisions for a company
     pub async fn get_pending(&self, company_id: &str, limit: i64) -> Result<Vec<Decision>> {
-        let decisions = sqlx::query_as::<_, Decision>(
-            &format!(
-                r#"
+        let decisions = sqlx::query_as::<_, Decision>(&format!(
+            r#"
                 SELECT * FROM decisions 
                 WHERE company_id = ? 
                 AND status = 'pending'
@@ -182,9 +181,8 @@ impl DecisionRepository {
                     created_at DESC
                 LIMIT {}
                 "#,
-                limit
-            ),
-        )
+            limit
+        ))
         .bind(company_id)
         .fetch_all(&self.pool)
         .await

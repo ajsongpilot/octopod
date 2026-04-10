@@ -177,9 +177,13 @@ pub fn spawn_agent_daemon(department: &str) -> Result<()> {
         .args([
             "new-session",
             "-d",
-            "-s", &session_name,
-            "-n", &format!("{}-agent", department),
-            "bash", "-c", &cmd,
+            "-s",
+            &session_name,
+            "-n",
+            &format!("{}-agent", department),
+            "bash",
+            "-c",
+            &cmd,
         ])
         .output()
         .context("Failed to create tmux session for agent")?;
@@ -194,7 +198,10 @@ pub fn spawn_agent_daemon(department: &str) -> Result<()> {
 
 /// Get status of both TUI and daemon for a department
 pub fn get_department_full_status(dept_id: &str, dept_name: &str) -> (bool, bool) {
-    (is_department_running(dept_id, dept_name), is_daemon_running(dept_id))
+    (
+        is_department_running(dept_id, dept_name),
+        is_daemon_running(dept_id),
+    )
 }
 
 /// Spawn all departments

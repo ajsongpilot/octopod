@@ -73,7 +73,16 @@ pub async fn run(all: bool, departments: Vec<String>) -> Result<()> {
 
 /// Spawn agent daemons for all departments
 async fn spawn_all_agents() -> Result<()> {
-    let departments = ["product", "engineering", "qa", "devops", "marketing", "sales", "finance", "legal"];
+    let departments = [
+        "product",
+        "engineering",
+        "qa",
+        "devops",
+        "marketing",
+        "sales",
+        "finance",
+        "legal",
+    ];
     println!("\n🤖 Starting agent daemons...");
     for dept in departments {
         match spawn_agent_daemon(dept) {
@@ -115,9 +124,13 @@ fn spawn_agent_daemon(department: &str) -> Result<()> {
         .args([
             "new-session",
             "-d",
-            "-s", &session_name,
-            "-n", &format!("{}-agent", department),
-            "bash", "-c", &cmd,
+            "-s",
+            &session_name,
+            "-n",
+            &format!("{}-agent", department),
+            "bash",
+            "-c",
+            &cmd,
         ])
         .output()
         .context("Failed to create tmux session for agent")?;

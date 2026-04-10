@@ -303,10 +303,10 @@ mod tests {
     fn test_agent_schedule_mark_run() {
         let mut schedule = AgentSchedule::new("engineering", 300);
         let original_next = schedule.next_run;
-        
+
         std::thread::sleep(std::time::Duration::from_millis(10));
         schedule.mark_run();
-        
+
         assert!(schedule.last_run.is_some());
         assert!(schedule.next_run.is_some());
         assert!(schedule.next_run > original_next);
@@ -316,34 +316,34 @@ mod tests {
     fn test_agent_run_status_variants() {
         let starting = AgentRunStatus::Starting;
         let running = AgentRunStatus::Running;
-        let completed = AgentRunStatus::Completed { 
-            success: true, 
-            message: "Done".to_string() 
+        let completed = AgentRunStatus::Completed {
+            success: true,
+            message: "Done".to_string(),
         };
         let error = AgentRunStatus::Error("Failed".to_string());
-        
+
         match starting {
-            AgentRunStatus::Starting => {},
+            AgentRunStatus::Starting => {}
             _ => panic!("Expected Starting"),
         }
-        
+
         match running {
-            AgentRunStatus::Running => {},
+            AgentRunStatus::Running => {}
             _ => panic!("Expected Running"),
         }
-        
+
         match completed {
             AgentRunStatus::Completed { success, message } => {
                 assert!(success);
                 assert_eq!(message, "Done");
-            },
+            }
             _ => panic!("Expected Completed"),
         }
-        
+
         match error {
             AgentRunStatus::Error(msg) => {
                 assert_eq!(msg, "Failed");
-            },
+            }
             _ => panic!("Expected Error"),
         }
     }
@@ -359,7 +359,7 @@ mod tests {
             next_run: schedule.next_run,
             enabled: schedule.enabled,
         };
-        
+
         assert_eq!(schedule.department_slug, schedule_clone.department_slug);
         assert_eq!(schedule.interval_secs, schedule_clone.interval_secs);
     }

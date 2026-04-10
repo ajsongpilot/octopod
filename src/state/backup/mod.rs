@@ -162,7 +162,7 @@ impl BackupManager {
     /// Restore from compressed backup
     async fn restore_compressed(&self, source: &Path, dest: &Path) -> Result<()> {
         use flate2::read::GzDecoder;
-        
+
         use std::io::Read;
 
         let compressed_data = fs::read(source).await?;

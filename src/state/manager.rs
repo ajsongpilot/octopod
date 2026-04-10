@@ -631,7 +631,9 @@ impl StateManager {
     ) -> Result<Initiative> {
         let mut initiative = Initiative::new(roadmap_id, department_id, title);
 
-        let file_path = self.initiative_file_manager.create_initiative_file(&initiative)?;
+        let file_path = self
+            .initiative_file_manager
+            .create_initiative_file(&initiative)?;
         initiative.file_path = Some(file_path);
 
         self.initiatives.create(&initiative).await
@@ -644,9 +646,12 @@ impl StateManager {
         title: &str,
         initiative_id: &str,
     ) -> Result<Initiative> {
-        let mut initiative = Initiative::new_with_id(roadmap_id, department_id, title, initiative_id);
+        let mut initiative =
+            Initiative::new_with_id(roadmap_id, department_id, title, initiative_id);
 
-        let file_path = self.initiative_file_manager.create_initiative_file(&initiative)?;
+        let file_path = self
+            .initiative_file_manager
+            .create_initiative_file(&initiative)?;
         initiative.file_path = Some(file_path);
 
         self.initiatives.create(&initiative).await
@@ -664,7 +669,9 @@ impl StateManager {
             .with_severity(severity)
             .with_stakeholders(stakeholders);
 
-        let file_path = self.initiative_file_manager.create_initiative_file(&initiative)?;
+        let file_path = self
+            .initiative_file_manager
+            .create_initiative_file(&initiative)?;
         initiative.file_path = Some(file_path);
 
         self.initiatives.create(&initiative).await
