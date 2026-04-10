@@ -1,7 +1,7 @@
 # Octopod
 
 [![crate](https://img.shields.io/crates/v/octopod.svg)](https://crates.io/crates/octopod)
-[![build](https://img.shields.io/github/actions/workflow/status/ajsongpilot/octopod/ci.yml?branch=master)](https://github.com/ajsongpilot/octopod/actions)
+[![build](https://github.com/ajsongpilot/octopod/actions/workflows/ci.yml/badge.svg)](https://github.com/ajsongpilot/octopod/actions)
 [![license](https://img.shields.io/crates/l/octopod)](LICENSE)
 
 **Many-Armed Company Orchestration** — Run your own AI-powered software company where you call the shots.
