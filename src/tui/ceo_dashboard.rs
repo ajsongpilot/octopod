@@ -1269,9 +1269,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: DashboardApp) 
     let tick_rate = Duration::from_millis(250);
 
     loop {
-        execute!(std::io::stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All), crossterm::cursor::Hide)?;
         terminal.draw(|f| ui(f, &app))?;
-        execute!(std::io::stdout(), crossterm::cursor::Show)?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
