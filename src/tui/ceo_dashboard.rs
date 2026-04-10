@@ -1297,7 +1297,6 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: DashboardApp) 
 fn ui(f: &mut Frame, app: &DashboardApp) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
         .constraints([
             Constraint::Length(3), // Header
             Constraint::Length(3), // Tabs
