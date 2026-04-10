@@ -9,7 +9,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, BorderType, Cell, Clear, Paragraph, Row, Table, Tabs, Wrap},
+    widgets::{Block, Borders, BorderType, Cell, Paragraph, Row, Table, Tabs, Wrap},
     Frame, Terminal,
 };
 use std::{
@@ -1295,9 +1295,6 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: DashboardApp) 
 }
 
 fn ui(f: &mut Frame, app: &DashboardApp) {
-    // Clear entire frame first to avoid border artifacts
-    f.render_widget(Clear, f.size());
-
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)

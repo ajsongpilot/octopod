@@ -229,10 +229,7 @@ impl DepartmentApp {
         let tick_rate = Duration::from_millis(100);
 
         loop {
-            // Clear screen and hide cursor before render to avoid artifacts
-            execute!(std::io::stdout(), crossterm::terminal::Clear(crossterm::terminal::ClearType::All), crossterm::cursor::Hide)?;
             terminal.draw(|f| self.ui(f))?;
-            execute!(std::io::stdout(), crossterm::cursor::Show)?;
 
             if let Some(ref mut receiver) = self.message_receiver {
                 while let Ok(message) = receiver.try_recv() {
@@ -910,9 +907,6 @@ impl DepartmentApp {
 
     fn ui(&self, frame: &mut Frame) {
         let size = frame.size();
-
-        // Clear entire frame first to avoid border artifacts
-        frame.render_widget(Clear, size);
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
