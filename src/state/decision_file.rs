@@ -118,13 +118,13 @@ created_at: {created_at}
         let file_path = self.get_file_path(decision_id);
 
         let cmd = format!(
-            "tmux new-window -n 'decision-edit' '{} {}'",
+            "tmux new-window -n 'decision-edit' -t octopod:1 {} {}",
             editor,
             file_path.display()
         );
         std::process::Command::new("sh")
             .arg("-c")
-            .arg(cmd)
+            .arg(&cmd)
             .spawn()
             .context("Failed to spawn editor in tmux")?;
         Ok(())

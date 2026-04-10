@@ -188,13 +188,13 @@ How will we know this initiative succeeded?
         let file_path = self.get_file_path(initiative_id);
 
         let cmd = format!(
-            "tmux new-window -n 'initiative-edit' '{} {}'",
+            "tmux new-window -n 'initiative-edit' -t octopod:1 {} {}",
             editor,
             file_path.display()
         );
         std::process::Command::new("sh")
             .arg("-c")
-            .arg(cmd)
+            .arg(&cmd)
             .spawn()
             .context("Failed to spawn editor in tmux")?;
         Ok(())

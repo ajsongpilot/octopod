@@ -1175,9 +1175,10 @@ while true; do
     echo "Ironclaw is thinking..."
     
     # Run ironclaw and capture the response
+    initiative_content=$(cat "$ORIGINAL_FILE")
     response=$(ironclaw run --message "Context: You are helping draft an initiative. Here is the initiative file at $ORIGINAL_FILE:
 
-$(cat '$ORIGINAL_FILE')
+$initiative_content
 
 ---
 
