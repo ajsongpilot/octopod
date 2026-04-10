@@ -1,0 +1,29 @@
+# Rust build artifacts
+/target
+**/*.rs.bk
+
+# Cargo.lock is usually committed for libraries, but not always for binaries
+# If you're building a library, consider keeping it
+# Cargo.lock
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Octopod specific
+.octopod/
+
+# Release builds
+debug/
+release/
+
+# Test artifacts
+*.prof
+*. acyl
+
+# Traces
+*.trace
