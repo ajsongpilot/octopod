@@ -584,7 +584,7 @@ impl DashboardApp {
             }
             KeyCode::Char('d') => {
                 if self.active_tab == 3 {
-                    self.draft_with_ironclaw_sync();
+                    self.draft_with_hermes_sync();
                 }
             }
             KeyCode::Char('a') => {
@@ -991,7 +991,7 @@ impl DashboardApp {
         }
     }
 
-    fn draft_with_ironclaw_sync(&mut self) {
+    fn draft_with_hermes_sync(&mut self) {
         if self.active_tab != 3 {
             return;
         }
@@ -1017,7 +1017,7 @@ impl DashboardApp {
             return;
         }
 
-        self.error_message = Some("Asking Ironclaw to help draft requirements...".to_string());
+        self.error_message = Some("Asking Hermes to help draft requirements...".to_string());
 
         // Read current content
         let current_content = match std::fs::read_to_string(&file_path) {
@@ -1028,7 +1028,7 @@ impl DashboardApp {
             }
         };
 
-        // Build prompt for Ironclaw
+        // Build prompt for Hermes
         let prompt = format!(
             r#"Help me draft requirements for the initiative "{}". 
 
@@ -1046,25 +1046,25 @@ Only output the improved markdown content - do not include any preamble or expla
             initiative_title, current_content
         );
 
-        // Invoke ironclaw in a background thread
+        // Invoke hermes in a background thread
         std::thread::spawn(move || {
-            let output = std::process::Command::new("ironclaw")
-                .args(["run", "--message", &prompt])
+            let output = std::process::Command::new("hermes")
+                .args(["chat", "-q", "--provider", "minimax", &prompt])
                 .output();
 
             match output {
                 Ok(result) => {
                     if result.status.success() {
-                        let ironclaw_response = String::from_utf8_lossy(&result.stdout);
+                        let hermes_response = String::from_utf8_lossy(&result.stdout);
                         // Only use response if it's substantial (not an error or empty)
-                        if !ironclaw_response.trim().is_empty()
-                            && !ironclaw_response.contains("error")
-                            && ironclaw_response.len() > 100
+                        if !hermes_response.trim().is_empty()
+                            && !hermes_response.contains("error")
+                            && hermes_response.len() > 100
                         {
-                            if let Err(e) = std::fs::write(&file_path, ironclaw_response.as_ref()) {
-                                error!("Failed to write ironclaw response: {}", e);
+                            if let Err(e) = std::fs::write(&file_path, hermes_response.as_ref()) {
+                                error!("Failed to write hermes response: {}", e);
                             } else {
-                                info!("Ironclaw drafted requirements for initiative");
+                                info!("Hermes drafted requirements for initiative");
                             }
                         } else {
                             // Fallback: just open in editor if response is empty/error
@@ -1081,17 +1081,16 @@ Only output the improved markdown content - do not include any preamble or expla
                         }
                     } else {
                         let stderr = String::from_utf8_lossy(&result.stderr);
-                        error!("Ironclaw failed: {}", stderr);
+                        error!("Hermes failed: {}", stderr);
                     }
                 }
                 Err(e) => {
-                    error!("Failed to run ironclaw: {}. Is ironclaw installed?", e);
+                    error!("Failed to run hermes: {}. Is hermes installed?", e);
                 }
             }
         });
 
-        self.error_message =
-            Some("Ironclaw is drafting... Check tmux window for results.".to_string());
+        self.error_message = Some("Hermes is drafting... Check terminal for results.".to_string());
     }
 
     fn ask_agent_sync(&mut self) {
@@ -1126,22 +1125,18 @@ Only output the improved markdown content - do not include any preamble or expla
             }
         };
 
-        self.error_message = Some("Opening Ironclaw chat... Check tmux window.".to_string());
+        self.error_message = Some("Opening Hermes chat... Check tmux window.".to_string());
 
-        // Create an interactive tmux window for chatting with Ironclaw
+        // Create an interactive tmux window for chatting with Hermes
         let script = format!(
             r#"#!/bin/bash
 
 ORIGINAL_FILE="{file_path}"
 BACKUP_FILE="/tmp/octopod-initiative-backup-$BASHPID.md"
 
-# Clean up any stale ironclaw processes (they can leave webhook server running)
-pkill -f "ironclaw.*webhook" 2>/dev/null || true
-rm -f "$HOME/.ironclaw/ironclaw.pid" 2>/dev/null
-
 clear
 echo "=============================================="
-echo "Ironclaw Initiative Chat"
+echo "Hermes Initiative Chat"
 echo "=============================================="
 echo "Initiative: {title}"
 echo "File: $ORIGINAL_FILE"
@@ -1149,7 +1144,6 @@ echo "=============================================="
 echo ""
 echo "Commands:"
 echo "  Type 'exit' or 'q' to quit"
-echo "  Type 'y' to approve Ironclaw's suggested changes"
 echo ""
 echo "--- Initiative Content ---"
 cat "$ORIGINAL_FILE"
@@ -1175,11 +1169,11 @@ while true; do
     # Restore backup before each interaction
     cp "$BACKUP_FILE" "$ORIGINAL_FILE"
     echo ""
-    echo "Ironclaw is thinking..."
+    echo "Hermes is thinking..."
     
-    # Run ironclaw with timeout and capture response (--cli-only avoids webhook server)
+    # Run hermes with timeout and capture response
     initiative_content=$(cat "$ORIGINAL_FILE")
-    response=$(timeout 120 ironclaw run --cli-only --message "Context: You are helping draft an initiative. Here is the initiative file at $ORIGINAL_FILE:
+    response=$(timeout 120 hermes chat -q --provider minimax "Context: You are helping draft an initiative. Here is the initiative file at $ORIGINAL_FILE:
 
 $initiative_content
 
@@ -1195,53 +1189,15 @@ User question: $user_input" 2>&1)
         echo "$response"
     elif [ $exit_code -eq 124 ]; then
         echo ""
-        echo "Ironclaw timed out after 2 minutes. The model may be taking too long."
+        echo "Hermes timed out after 2 minutes. The model may be taking too long."
         echo "Try a simpler question."
         continue
     else
         echo ""
-        echo "Ironclaw errored (exit code: $exit_code)"
+        echo "Hermes errored (exit code: $exit_code)"
         echo "$response"
         continue
     fi
-    
-    # Check if ironclaw wants to make changes and prompt for approval
-    if echo "$response" | grep -q "apply_patch requires approval"; then
-        echo "=============================================="
-        echo "Ironclaw wants to update the initiative file!"
-        echo "=============================================="
-        
-        # Extract the patched file path more robustly
-        # Look for 'path:' followed by a file path (handles backticks, spaces, etc.)
-        tmpfile=""
-        if echo "$response" | grep -q 'path:'; then
-            # Extract the line with path:, then extract the actual path
-            # Handle cases like: `path: /tmp/file.md` or path: /tmp/file.md
-            tmpfile=$(echo "$response" | grep 'path:' | head -1 | sed -E 's/.*path: *[`]?([^ `]*)[`]?.*/\1/' | tr -d '`')
-        fi
-        
-        if [ -z "$tmpfile" ]; then
-            echo "WARNING: Could not extract patch file path from response."
-            echo "Ironclaw may need manual file editing tools enabled."
-            echo ""
-        elif [ ! -f "$tmpfile" ]; then
-            echo "WARNING: Patch file does not exist: $tmpfile"
-            echo ""
-        else
-            echo "--- Diff Preview ---"
-            diff -u "$ORIGINAL_FILE" "$tmpfile" || true
-            echo "--- End Diff ---"
-            echo ""
-            echo "Type 'y' and press Enter to approve these changes,"
-            echo "or just press Enter to skip."
-            read -r approve
-            if [ "$approve" = "y" ] || [ "$approve" = "Y" ]; then
-                cp "$tmpfile" "$ORIGINAL_FILE"
-                echo "Applied Ironclaw's changes!"
-            else
-                echo "Changes skipped. Your file is unchanged."
-            fi
-        fi
     fi
 done
 "#,
@@ -1249,7 +1205,7 @@ done
             file_path = file_path.display()
         );
 
-        let script_path = format!("/tmp/octopod-ironclaw-chat-{}.sh", &initiative_id[..8]);
+        let script_path = format!("/tmp/octopod-hermes-chat-{}.sh", &initiative_id[..8]);
         if let Err(e) = std::fs::write(&script_path, script) {
             self.error_message = Some(format!("Failed to create script: {}", e));
             return;
@@ -1465,7 +1421,7 @@ DECISIONS TAB
 PLANNING TAB
   p            Create roadmap
   i            Create initiative
-  d            Draft with Ironclaw (one-shot)
+  d            Draft with Hermes (one-shot)
   a            Ask agent about initiative (interactive chat)
   e            Edit selected initiative
   v            Cycle view (all -> active -> done)
