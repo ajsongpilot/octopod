@@ -9,7 +9,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Tabs, Wrap},
+    widgets::{Block, Borders, BorderType, Cell, Clear, Paragraph, Row, Table, Tabs, Wrap},
     Frame, Terminal,
 };
 use std::{
@@ -1312,7 +1312,7 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
         .split(f.size());
 
     // Header
-    let header = Paragraph::new("🐙 Octopod CEO Dashboard")
+    let header = Paragraph::new(" Octopod CEO Dashboard ")
         .style(
             Style::default()
                 .fg(Color::Rgb(255, 127, 80))
@@ -1322,6 +1322,7 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_type(BorderType::Plain)
                 .border_style(Style::default().fg(Color::Rgb(138, 43, 226))),
         );
     f.render_widget(header, chunks[0]);
@@ -1369,6 +1370,7 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_type(BorderType::Plain)
                 .border_style(Style::default().fg(Color::Rgb(138, 43, 226))),
         );
     f.render_widget(footer, chunks[3]);
