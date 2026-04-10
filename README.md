@@ -105,33 +105,33 @@ octopod
 
 ## Features
 
-### 🎯 Initiative-Driven Workflow
+### Initiative-Driven Workflow
 - **Propose initiatives** with severity levels (LOW/MED/HIGH)
 - **Automatic triage** — LOW/MED auto-proceed, HIGH requires CEO approval
-- **Status tracking** — Draft → Proposed → Approved → Active → Completed
+- **Status tracking** — Draft -> Proposed -> Approved -> Active -> Completed
 - **Markdown files** — Initiatives and decisions are stored as markdown files in `.octopod/initiatives/` and `.octopod/decisions/`
 
 ### Ironclaw Integration
-Press `a` in the Planning tab to open an interactive tmux chat with Ironclaw about an initiative. Ironclaw can suggest improvements and, upon your approval, apply changes to the markdown file.
+Octopod uses [Ironclaw](https://github.com/anomalyco/ironclaw) with [opencode](https://github.com/opencode-ai/opencode) as the underlying AI agent. Press `a` in the Planning tab to open an interactive tmux chat with Ironclaw about an initiative. Ironclaw can suggest improvements and, upon your approval, apply changes to the markdown file.
 
 ### Autonomous AI Agents
-- Each department runs its own **always-on agent daemon**
+- Each department runs its own **always-on agent daemon** powered by Ironclaw/opencode
 - Agents **pick up unassigned tasks** automatically
 - Agents **collaborate via message bus**
 
-### 💼 CEO Dashboard
+### CEO Dashboard
 - **Decision Queue** — see all HIGH-severity decisions awaiting your approval
-- **Severity indicators** — 🔴 HIGH 🟡 MED ⚪ LOW
+- **Severity indicators** — HIGH / MED / LOW
 - **Initiative Planning** — track all company initiatives
 
-### 🖥️ Department TUIs
+### Department TUIs
 Each department has its own terminal interface with:
 - **Board view** — Kanban-style task board
 - **List view** — filterable task list
 - **Activity feed** — real-time department activity
 - **Chat** — inter-department communication
 
-### 📊 Activity Log
+### Activity Log
 - All agent actions logged to database
 - CEO can view all activity across departments
 - Timestamps, actors, actions tracked
