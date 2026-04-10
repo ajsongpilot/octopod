@@ -1,6 +1,6 @@
 [package]
 name = "octopod"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Octopod Contributors"]
 description = "Many-Armed Company Orchestration - AI-Powered Software Development Teams"

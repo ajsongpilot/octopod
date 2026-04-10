@@ -501,18 +501,19 @@ pub struct ActivityLogEntry {
     pub details_json: Option<String>,
 }
 
-/// Initiative status - lifecycle for initiatives (values match database: 1=draft, 2=proposed, etc.)
+/// Initiative status - lifecycle for initiatives
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(rename_all = "snake_case")]
 pub enum InitiativeStatus {
-    Draft = 1,             // Initial creation, not yet proposed
-    Proposed = 2,          // Submitted for review, awaiting stakeholder input
-    StakeholderReview = 3, // Active review with stakeholders
-    Approved = 4,          // Approved but not yet started
-    Active = 5,            // In progress
-    Completed = 6,         // Done
-    Cancelled = 7,         // Cancelled
-    Closed = 8,            // Closed without completion (e.g., scrapped, deferred)
-    Archived = 9,          // Archived
+    Draft,             // Initial creation, not yet proposed
+    Proposed,          // Submitted for review, awaiting stakeholder input
+    StakeholderReview, // Active review with stakeholders
+    Approved,          // Approved but not yet started
+    Active,            // In progress
+    Completed,         // Done
+    Cancelled,         // Cancelled
+    Closed,            // Closed without completion (e.g., scrapped, deferred)
+    Archived,          // Archived
 }
 
 impl InitiativeStatus {

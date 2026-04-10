@@ -1,0 +1,58 @@
+name: Bump Version
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  bump-version:
+    name: Bump version and publish
+    runs-on: ubuntu-latest
+    # Skip if this commit is a version bump (prevents infinite loop)
+    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for version bump
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Bump version
+        id: bump
+        run: |
+          # Get current version from the latest tag
+          CURRENT=$(git describe --tags --abbrev=0 | sed 's/v//')
+          if [ -z "$CURRENT" ]; then
+            CURRENT="0.0.0"
+          fi
+          echo "Current version: $CURRENT"
+          
+          # Bump patch version
+          IFS='.' read -r major minor patch <<< "$CURRENT"
+          NEW_VERSION="${major}.${minor}.$((patch + 1))"
+          echo "New version: $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update Cargo.toml
+          cargo set-version "$NEW_VERSION"
+          
+          # Commit the change
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: bump version to $NEW_VERSION"
+          
+          # Create git tag
+          git tag "v$NEW_VERSION"
+
+      - name: Push changes
+        run: |
+          git push origin master --tags
+
+      - name: Publish to crates.io
+        run: |
+          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}

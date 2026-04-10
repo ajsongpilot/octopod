@@ -93,6 +93,12 @@ pub fn get_migrations() -> Vec<Migration> {
             up_sql: include_str!("015_fix_roadmap_status_id.sql"),
             down_sql: None,
         },
+        Migration {
+            version: 16,
+            name: "convert_initiative_status_to_text",
+            up_sql: include_str!("016_convert_initiative_status_to_text.sql"),
+            down_sql: None,
+        },
     ]
 }
 
