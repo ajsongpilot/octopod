@@ -84,14 +84,14 @@ octopod
                            v
 +------------------------------------------------------------+
 |                      Message Bus                           |
-|   (DecisionProposal, InitiativeUpdate, TaskAssignment)      |
+|   (DecisionProposal, InitiativeUpdate, TaskAssignment)     |
 +------------------------------------------------------------+
                            |
       +----------+----------+----------+----------+
       v          v          v          v          v
 +----------+----------+----------+----------+----------+
-| Product  |   Eng    |    QA    |  DevOps  |    Mktg |
-|  Agent   |  Agent   |  Agent   |  Agent   |  Agent  |
+| Product  |   Eng    |    QA    |  DevOps  |   Mktg   |
+|  Agent   |  Agent   |  Agent   |  Agent   |   Agent  |
 +----------+----------+----------+----------+----------+
       |          |          |          |          |
       +----------+----------+----------+----------+
@@ -99,7 +99,7 @@ octopod
                            v
 +------------------------------------------------------------+
 |                    SQLite Database                         |
-|   (Tasks, Decisions, Initiatives, Meetings, Messages)       |
+|   (Tasks, Decisions, Initiatives, Meetings, Messages)      |
 +------------------------------------------------------------+
 ```
 
