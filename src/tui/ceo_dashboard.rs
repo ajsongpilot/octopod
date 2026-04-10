@@ -1318,7 +1318,7 @@ fn ui(f: &mut Frame, app: &DashboardApp) {
         .split(f.size());
 
     // Header
-    let header = Paragraph::new(" Octopod CEO Dashboard ")
+    let header = Paragraph::new("🐙 Octopod CEO Dashboard")
         .style(
             Style::default()
                 .fg(Color::Rgb(255, 127, 80))

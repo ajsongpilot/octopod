@@ -10,12 +10,8 @@ pub struct InitiativeFileManager {
 
 impl InitiativeFileManager {
     pub fn new(project_dir: &Path) -> Result<Self> {
-        // If project_dir is already .octopod, don't add another .octopod prefix
-        let initiatives_dir = if project_dir
-            .file_name()
-            .map(|s| s == ".octopod")
-            .unwrap_or(false)
-        {
+        // Handle paths correctly - if already in .octopod, use directly, otherwise add prefix
+        let initiatives_dir = if project_dir.ends_with(".octopod") {
             project_dir.join("initiatives")
         } else {
             project_dir.join(".octopod").join("initiatives")
