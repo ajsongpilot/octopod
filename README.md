@@ -111,11 +111,13 @@ octopod
 - **Status tracking** — Draft -> Proposed -> Approved -> Active -> Completed
 - **Markdown files** — Initiatives and decisions are stored as markdown files in `.octopod/initiatives/` and `.octopod/decisions/`
 
-### Ironclaw Integration
-Octopod uses [Ironclaw](https://github.com/anomalyco/ironclaw) with [opencode](https://github.com/opencode-ai/opencode) as the underlying AI agent. Press `a` in the Planning tab to open an interactive tmux chat with Ironclaw about an initiative. Ironclaw can suggest improvements and, upon your approval, apply changes to the markdown file.
+### Hermes Agent Integration
+Octopod uses [Hermes](https://github.com/NousResearch/hermes-agent) as the AI agent backend. Hermes is a self-improving AI agent built by Nous Research with support for 200+ models via OpenRouter.
+
+Press `a` in the Planning tab to open an interactive tmux chat with Hermes about an initiative. Hermes can suggest improvements and, upon your approval, apply changes to the markdown file.
 
 ### Autonomous AI Agents
-- Each department runs its own **always-on agent daemon** powered by Ironclaw/opencode
+- Each department runs its own **always-on agent daemon** powered by Hermes
 - Agents **pick up unassigned tasks** automatically
 - Agents **collaborate via message bus**
 

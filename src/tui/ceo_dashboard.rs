@@ -1135,26 +1135,9 @@ Only output the improved markdown content - do not include any preamble or expla
 ORIGINAL_FILE="{file_path}"
 BACKUP_FILE="/tmp/octopod-initiative-backup-$BASHPID.md"
 
-# Check if ironclaw is already running and responsive
-ironclaw_healthy=false
-if [ -f "$HOME/.ironclaw/ironclaw.pid" ]; then
-    old_pid=$(cat "$HOME/.ironclaw/ironclaw.pid" 2>/dev/null)
-    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-        # PID exists and process is running - check if responsive
-        if timeout 3 ironclaw session list >/dev/null 2>&1; then
-            echo "Using existing Ironclaw instance (PID $old_pid)"
-            ironclaw_healthy=true
-        else
-            echo "Ironclaw instance not responsive, cleaning up..."
-            rm -f "$HOME/.ironclaw/ironclaw.pid" 2>/dev/null
-            pkill -f "ironclaw.*webhook_server" 2>/dev/null || true
-            sleep 1
-        fi
-    else
-        # Stale PID file
-        rm -f "$HOME/.ironclaw/ironclaw.pid" 2>/dev/null
-    fi
-fi
+# Clean up any stale ironclaw processes (they can leave webhook server running)
+pkill -f "ironclaw.*webhook" 2>/dev/null || true
+rm -f "$HOME/.ironclaw/ironclaw.pid" 2>/dev/null
 
 clear
 echo "=============================================="
@@ -1192,12 +1175,11 @@ while true; do
     # Restore backup before each interaction
     cp "$BACKUP_FILE" "$ORIGINAL_FILE"
     echo ""
-    echo "Ironclaw is thinking... (may take a few minutes)"
+    echo "Ironclaw is thinking..."
     
-    # Run ironclaw with timeout and capture response
+    # Run ironclaw with timeout and capture response (--cli-only avoids webhook server)
     initiative_content=$(cat "$ORIGINAL_FILE")
-    echo "Waiting for Ironclaw response..."
-    response=$(timeout 300 ironclaw run --message "Context: You are helping draft an initiative. Here is the initiative file at $ORIGINAL_FILE:
+    response=$(timeout 120 ironclaw run --cli-only --message "Context: You are helping draft an initiative. Here is the initiative file at $ORIGINAL_FILE:
 
 $initiative_content
 
@@ -1206,21 +1188,22 @@ $initiative_content
 User question: $user_input" 2>&1)
     exit_code=$?
     
-    if [ $exit_code -eq 124 ]; then
+    # Check if we got meaningful content (even if killed by timeout)
+    response_len=$(echo "$response" | wc -c)
+    if [ -n "$response" ] && [ "$response_len" -gt 20 ]; then
         echo ""
-        echo "Ironclaw timed out after 5 minutes. The model may be taking too long."
-        echo "Try a simpler question or wait for Ironclaw to finish starting up."
-        continue
-    elif [ $exit_code -ne 0 ]; then
-        echo ""
-        echo "Ironclaw errored (exit code: $exit_code):"
         echo "$response"
-        echo "Try again."
+    elif [ $exit_code -eq 124 ]; then
+        echo ""
+        echo "Ironclaw timed out after 2 minutes. The model may be taking too long."
+        echo "Try a simpler question."
+        continue
+    else
+        echo ""
+        echo "Ironclaw errored (exit code: $exit_code)"
+        echo "$response"
         continue
     fi
-    
-    echo ""
-    echo "$response"
     
     # Check if ironclaw wants to make changes and prompt for approval
     if echo "$response" | grep -q "apply_patch requires approval"; then
