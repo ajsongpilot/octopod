@@ -365,13 +365,12 @@ impl DepartmentApp {
                 } else if self.active_view == 1
                     && self.selected_task_index > 0 {
                         self.selected_task_index -= 1;
-                    } else if self.active_view == 4 {
-                    if self.selected_agent_index > 0 {
+                    } else if self.active_view == 4
+                    && self.selected_agent_index > 0 {
                         self.selected_agent_index -= 1;
                         if self.selected_agent_index < self.agent_scroll_offset {
                             self.agent_scroll_offset = self.selected_agent_index;
                         }
-                    }
                 }
             }
             KeyCode::Down => {
@@ -603,8 +602,8 @@ impl DepartmentApp {
                     let _ = Command::new("ps")
                         .args(["aux"])
                         .output()
-                        .and_then(|output| {
-                            Ok(String::from_utf8_lossy(&output.stdout).lines()
+                        .map(|output| {
+                            String::from_utf8_lossy(&output.stdout).lines()
                                 .filter(|line| line.contains("opencode"))
                                 .filter(|line| !line.contains("grep"))
                                 .filter(|line| line.contains(&title_pattern))
@@ -612,7 +611,7 @@ impl DepartmentApp {
                                 .filter_map(|s| s.parse::<u32>().ok())
                                 .for_each(|pid| {
                                     let _ = Command::new("kill").arg(pid.to_string()).output();
-                                }))
+                                })
                         });
                     info!("Deleted session and killed process for {}", session.session_id);
                 }
@@ -1124,8 +1123,6 @@ Press ? or Esc to close";
                 "{}  |  [f] filter  [/] search  [Enter] view  [↑↓] move  [q] quit{}",
                 active, search_hint
             )
-        } else if self.active_view == 4 {
-            format!("{}  |  [tab] switch  [q] quit", active)
         } else {
             format!("{}  |  [tab] switch  [q] quit", active)
         };
@@ -1632,8 +1629,7 @@ Press ? or Esc to close";
             items.push(ListItem::new(format!("{} Octopod Agents:", session_count))
                 .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
             
-            for i in start_idx..end_idx {
-                let session = &sessions[i];
+            for (i, session) in sessions.iter().enumerate().take(end_idx).skip(start_idx) {
                 let is_selected = i == selected;
                 let style = if is_selected {
                     Style::default().fg(Color::Black).bg(Color::Rgb(255, 127, 80))

@@ -675,7 +675,7 @@ impl DashboardApp {
             info!("Killed daemon for {}", dept.name);
             
             // Kill all opencode processes for this department
-            let _title_pattern = format!("octopod:task_:");
+            let _title_pattern = "octopod:task_:".to_string();
             if let Ok(output) = std::process::Command::new("ps")
                 .args(["aux"])
                 .output()
@@ -1044,7 +1044,7 @@ Only output the improved markdown content - do not include any preamble or expla
                             // Fallback: just open in editor if response is empty/error
                             if let Err(e) = std::process::Command::new("sh")
                                 .arg("-c")
-                                .arg(&format!("tmux new-window -n 'initiative-draft' '$EDITOR {}'", file_path.display()))
+                                .arg(format!("tmux new-window -n 'initiative-draft' '$EDITOR {}'", file_path.display()))
                                 .spawn()
                             {
                                 error!("Failed to spawn editor: {}", e);
